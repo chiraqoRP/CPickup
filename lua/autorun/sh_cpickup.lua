@@ -13,13 +13,13 @@ local function FindUseEntity(ply)
     return trData.Entity
 end
 
-local enabled = CreateConVar("cl_cpickup", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED), "", 0, 1)
+local enabled = CreateConVar("sv_cpickup", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED), "Enables/disables manual pickup serverside for all players.", 0, 1)
 local shouldEquip = nil
 local shouldAnimate = nil
 
 if CLIENT then
-    shouldEquip = CreateClientConVar("cl_cpickup_alwaysequip", 1, true, false, "", 0, 1)
-    shouldAnimate = CreateClientConVar("cl_cpickup_vmanip", 0, true, false, "", 0, 1)
+    shouldEquip = CreateClientConVar("cl_cpickup_alwaysequip", 1, true, false, "Enables/disables always auto-switching to whatever weapon is picked up.", 0, 1)
+    shouldAnimate = CreateClientConVar("cl_cpickup_vmanip", 0, true, false, "Enables/disables vmanip hand animation on pickup. Disabled by default because it doesn't look too good.", 0, 1)
 end
 
 local isCallingPickupHooks = false
@@ -145,7 +145,7 @@ if CLIENT then
         weight = 500
     })
 
-    local hudEnabled = CreateClientConVar("cl_cpickup_hud", 0, true, false, "", 0, 1)
+    local hudEnabled = CreateClientConVar("cl_cpickup_hud", 0, true, false, "Enables/disables pickup hud.", 0, 1)
     local bindFormat = "[%s] pickup "
     local pickupAlpha, lastWep = 0, nil
 
