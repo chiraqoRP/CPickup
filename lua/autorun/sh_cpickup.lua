@@ -4,13 +4,16 @@ local pGetAimVector = PLAYER.GetAimVector
 
 local function FindUseEntity(ply)
     local eyePos = eEyePos(ply)
-    local trData = util.TraceLine({
+    local aimVector = pGetAimVector(ply)
+    aimVector:Mul(80)
+
+    local tr = util.TraceLine({
         start = eyePos,
-        endpos = eyePos + pGetAimVector(ply) * 80,
+        endpos = eyePos + aimVector,
         filter = ply
     })
 
-    return trData.Entity
+    return tr.Entity
 end
 
 local enabled = CreateConVar("sv_cpickup", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED), "Enables/disables manual pickup serverside for all players.", 0, 1)
@@ -18,7 +21,7 @@ local shouldEquip = nil
 local shouldAnimate = nil
 
 if CLIENT then
-    shouldEquip = CreateClientConVar("cl_cpickup_alwaysequip", 1, true, false, "Enables/disables always auto-switching to whatever weapon is picked up.", 0, 1)
+    shouldEquip = CreateClientConVar("cl_cpickup_equip", 1, true, false, "Enables/disables auto-switching to whatever weapon is picked up.", 0, 1)
     shouldAnimate = CreateClientConVar("cl_cpickup_vmanip", 0, true, false, "Enables/disables vmanip hand animation on pickup. Disabled by default because it doesn't look too good.", 0, 1)
 end
 
@@ -101,7 +104,7 @@ if SERVER then
         end
 
         if wep.SpawnedIn then
-            return true
+            return
         end
 
         return false
@@ -145,9 +148,43 @@ if CLIENT then
         weight = 500
     })
 
-    local hudEnabled = CreateClientConVar("cl_cpickup_hud", 0, true, false, "Enables/disables pickup hud.", 0, 1)
-    local bindFormat = "[%s] pickup "
+    local halos = CreateClientConVar("cl_cpickup_halo", 0, true, false, "Enables/disables halos around items that can be picked up.", 0, 1)
+    local haloColor = Color(230, 225, 0, 200)
     local pickupAlpha, lastWep = 0, nil
+
+    hook.Add("PreDrawHalos", "CPickup.ItemHalo", function()
+        if !enabled:GetBool() or !halos:GetBool() then
+            return
+        end
+
+        local useWep = FindUseEntity(LocalPlayer())
+        local curWep = useWep
+
+        if !IsValid(curWep) or !curWep:IsWeapon() then
+            pickupAlpha = math.Approach(pickupAlpha, 0, RealFrameTime() / 0.1)
+
+            curWep = lastWep
+        else
+            pickupAlpha = math.Approach(pickupAlpha, 1, RealFrameTime() / 0.1)
+        end
+
+        -- Check again to enforce last weapon validity.
+        if !IsValid(curWep) or !curWep:IsWeapon() then
+            return
+        end
+
+        -- Don't waste resources drawing an invisible pickup notice.
+        if !IsValid(useWep) and pickupAlpha == 0 then
+            return
+        end
+
+        haloColor.a = 200 * pickupAlpha
+
+        halo.Add({curWep}, haloColor, 2, 2, 2, true)
+    end)
+
+    local hudEnabled = CreateClientConVar("cl_cpickup_hud", 1, true, false, "Enables/disables pickup hud.", 0, 1)
+    local bindFormat = "[%s] pickup "
 
     hook.Add("HUDPaint", "CPickup.DrawNotice", function()
         if !enabled:GetBool() or !hudEnabled:GetBool() then
