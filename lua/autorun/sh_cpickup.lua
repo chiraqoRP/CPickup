@@ -132,7 +132,7 @@ if SERVER then
 end
 
 if CLIENT then
-    local scale = ScrW() / 2560
+    local scale = ScrH() / 1440
 
     surface.CreateFont("CPickup.Main", {
         font = system.IsLinux() and "stratum2-medium.ttf" or "Stratum2 Md",
