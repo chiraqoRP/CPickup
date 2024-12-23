@@ -98,12 +98,16 @@ hook.Add("KeyPress", "CPickup.DoPickup", function(ply, key)
 end)
 
 if SERVER then
+    local spawnTimes = {}
+
     hook.Add("PlayerCanPickupWeapon", "CPickup.StopDefaultPickup", function(ply, wep)
         if isCallingPickupHooks or !enabled:GetBool() then
             return
         end
 
-        if wep.SpawnedIn then
+        local spawnTime = spawnTimes[ply]
+
+        if wep.SpawnedIn or (spawnTime and spawnTime > CurTime() + 5) then
             return
         end
 
@@ -128,6 +132,23 @@ if SERVER then
                 ent.SpawnedIn = false
             end)
         end
+    end)
+
+    local loadQueue = {}
+
+    hook.Add("PlayerInitialSpawn", "CPickup.MapPickupSetup", function(ply)
+        loadQueue[ply] = true
+    end)
+
+    -- HACK: Some maps (HL2 campaign) give weapons by spawning them on top of the player.
+    -- This works around that issue by disabling the default pickup stopper for a few seconds.
+    hook.Add("SetupMove", "CPickup.AllowMapPickups", function(ply, mv, cmd)
+        if !loadQueue[ply] or cmd:IsForced() then
+            return
+        end
+    
+        loadQueue[ply] = nil
+        spawnTimes[ply] = CurTime()
     end)
 end
 
